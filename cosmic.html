@@ -1,1 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cosmic Dash</title>
+    <!-- Tailwind CSS for utility classes -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* Custom CSS for the game */
+        body {
+            font-family: 'Orbitron', sans-serif;
+            background-color: #0d1117;
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            flex-direction: column;
+        }
+
+        .game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #gameCanvas {
+            background-color: #000000;
+            display: block;
+            border: 4px solid #50e3c2;
+            box-shadow: 0 0 20px #50e3c2, inset 0 0 10px #50e3c2;
+            cursor: none; /* Hide default cursor */
+            touch-action: none; /* Prevent default touch actions */
+        }
+
+        .ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 10;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .menu-title {
+            font-size: 2.5rem;
+            text-shadow: 0 0 10px #50e3c2;
+            margin-bottom: 1rem;
+            text-align: center;
+            color: #e2e8f0;
+        }
+
+        .score-display {
+            font-size: 1.5rem;
+            text-shadow: 0 0 5px #50e3c2;
+            margin-bottom: 2rem;
+            color: #e2e8f0;
+        }
+
+        .action-button {
+            background: linear-gradient(135deg, #4a90e2, #50e3c2);
+            color: #ffffff;
+            font-size: 1.25rem;
+            padding: 1rem 2.5rem;
+            border-radius: 9999px;
+            border: none;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+            transition: all 0.2s ease-in-out;
+            cursor: pointer;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        .action-button:hover {
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        #score-container {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            font-size: 1.5rem;
+            text-shadow: 0 0 5px #50e3c2;
+            display: none;
+            color: #50e3c2;
+        }
+
+        #message-box {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(255, 255, 255, 0.95);
+            border: 2px solid #333;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            z-index: 100;
+            display: none;
+            text-align: center;
+            max-width: 80%;
+        }
+
+        #message-box h3 {
+            margin-top: 0;
+            color: #333;
+        }
+
+        #message-box p {
+            margin-bottom: 15px;
+            color: #555;
+        }
+
+        #message-box button {
+            padding: 8px 16px;
+            border: none;
+            background-color: #4a90e2;
+            color: white;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        .text-shadow-glow {
+            text-shadow: 0 0 5px #a4c6ff;
+            color: #d1d5db; /* Light gray */
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- Start Menu -->
+        <div id="startMenu" class="ui-overlay">
+            <h1 class="menu-title">Cosmic Dash</h1>
+            <p class="score-display">Dodge the asteroids and collect orbs!</p>
+            <button id="startButton" class="action-button">Start Game</button>
+            <p class="absolute bottom-4 right-4 text-sm text-shadow-glow">MADE BY HUSNAIN YASEEN</p>
+        </div>
+
+        <!-- Game Over Menu -->
+        <div id="gameOverMenu" class="ui-overlay hidden">
+            <h1 class="menu-title">Game Over</h1>
+            <p id="finalScore" class="score-display">Final Score: 0</p>
+            <button id="restartButton" class="action-button">Restart</button>
+        </div>
+
+        <!-- Score Display during game -->
+        <div id="score-container">
+            Score: <span id="currentScore">0</span>
+        </div>
+
+        <!-- Custom message box to replace alert() -->
+        <div id="message-box" class="rounded-lg">
+            <h3 id="message-title"></h3>
+            <p id="message-text"></p>
+            <button id="message-ok-button">OK</button>
+        </div>
+    </div>
+
+    <script>
+        // --- Custom Message Box Functions ---
+        function showMessageBox(title, text) {
+            const messageBox = document.getElementById('message-box');
+            document.getElementById('message-title').textContent = title;
+            document.getElementById('message-text').textContent = text;
+            messageBox.style.display = 'block';
+
+            document.getElementById('message-ok-button').onclick = () => {
+                messageBox.style.display = 'none';
+            };
+        }
+
+        // --- Game Setup and Initialization ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let animationFrameId;
+
+        // UI Elements
+        const startMenu = document.getElementById('startMenu');
+        const gameOverMenu = document.getElementById('gameOverMenu');
+        const startButton = document.getElementById('startButton');
+        const restartButton = document.getElementById('restartButton');
+        const scoreContainer = document.getElementById('score-container');
+        const currentScoreEl = document.getElementById('currentScore');
+        const finalScoreEl = document.getElementById('finalScore');
+
+        // Game State
+        let gameState = 'START';
+        let player, asteroids = [], orbs = [];
+        let score = 0;
+        let lastSpawnTime = 0;
+        const baseSpawnInterval = 1000; // Milliseconds
+        let spawnInterval = baseSpawnInterval;
+        let speedMultiplier = 1;
+
+        // Player object
+        function Player() {
+            this.width = 40;
+            this.height = 50;
+            this.x = canvas.width / 2;
+            this.y = canvas.height * 0.8;
+            this.radius = 15; // For collision detection
+            this.speed = 0;
+            this.targetX = this.x; // For smooth movement
+
+            this.draw = function() {
+                // Draw the main body of the ship
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y - this.height / 2);
+                ctx.lineTo(this.x - this.width / 2, this.y + this.height / 2);
+                ctx.lineTo(this.x + this.width / 2, this.y + this.height / 2);
+                ctx.closePath();
+                ctx.fillStyle = '#4a90e2';
+                ctx.fill();
+
+                // Add a glowing effect
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = '#4a90e2';
+                ctx.strokeStyle = '#a4c6ff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Draw the engine exhaust (glowing tail)
+                ctx.beginPath();
+                ctx.moveTo(this.x - 10, this.y + this.height / 2);
+                ctx.lineTo(this.x, this.y + this.height / 2 + 20);
+                ctx.lineTo(this.x + 10, this.y + this.height / 2);
+                ctx.closePath();
+                ctx.fillStyle = '#50e3c2';
+                ctx.fill();
+                ctx.shadowColor = '#50e3c2';
+                ctx.shadowBlur = 15;
+
+                // Reset shadow for other objects
+                ctx.shadowBlur = 0;
+            };
+        }
+
+        // Asteroid object
+        function Asteroid() {
+            this.size = Math.random() * 20 + 20; // 20 to 40
+            this.x = Math.random() * (canvas.width - this.size) + this.size / 2;
+            this.y = -this.size;
+            this.speed = Math.random() * 2 + 1;
+
+            this.draw = function() {
+                // Draw a simple rock shape
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size / 2, 0, Math.PI * 2, false);
+                
+                // Add a glowing effect and gradient
+                const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.size / 2);
+                gradient.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
+                gradient.addColorStop(1, '#8352e8');
+                ctx.fillStyle = gradient;
+                ctx.fill();
+
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = '#8352e8';
+                ctx.strokeStyle = '#a4c6ff';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                ctx.shadowBlur = 0;
+            };
+        }
+
+        // Orb object (Collectible)
+        function Orb() {
+            this.size = 10;
+            this.x = Math.random() * (canvas.width - this.size) + this.size / 2;
+            this.y = -this.size;
+            this.speed = Math.random() * 1.5 + 1;
+
+            this.draw = function() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2, false);
+                ctx.fillStyle = '#f56565';
+                ctx.fill();
+
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = '#f56565';
+                ctx.strokeStyle = '#fca5a5';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                ctx.shadowBlur = 0;
+            };
+        }
+
+        // --- Game Logic Functions ---
+        function initGame() {
+            player = new Player();
+            asteroids = [];
+            orbs = [];
+            score = 0;
+            lastSpawnTime = 0;
+            spawnInterval = baseSpawnInterval;
+            speedMultiplier = 1;
+
+            startMenu.classList.add('hidden');
+            gameOverMenu.classList.add('hidden');
+            scoreContainer.style.display = 'block';
+
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+            }
+            animationFrameId = requestAnimationFrame(gameLoop);
+            gameState = 'PLAYING';
+        }
+
+        function spawnObjects(timestamp) {
+            if (timestamp - lastSpawnTime > spawnInterval) {
+                // Spawn an asteroid
+                const newAsteroid = new Asteroid();
+                newAsteroid.speed *= speedMultiplier;
+                asteroids.push(newAsteroid);
+
+                // Spawn an orb occasionally
+                if (Math.random() > 0.7) {
+                    const newOrb = new Orb();
+                    newOrb.speed *= speedMultiplier;
+                    orbs.push(newOrb);
+                }
+
+                lastSpawnTime = timestamp;
+
+                // Gradually decrease interval and increase speed for difficulty
+                spawnInterval = Math.max(200, spawnInterval - 10);
+                speedMultiplier += 0.005;
+            }
+        }
+
+        function update() {
+            // Update player position for smooth movement
+            const dx = player.targetX - player.x;
+            if (Math.abs(dx) > 1) {
+                 player.x += dx * 0.1; // Smooth interpolation
+            } else {
+                 player.x = player.targetX;
+            }
+
+            // Update asteroids and orbs position
+            asteroids.forEach(asteroid => { asteroid.y += asteroid.speed; });
+            orbs.forEach(orb => { orb.y += orb.speed; });
+
+            // Remove objects that are off-screen
+            asteroids = asteroids.filter(asteroid => asteroid.y < canvas.height + asteroid.size);
+            orbs = orbs.filter(orb => orb.y < canvas.height + orb.size);
+
+            // Check for collisions
+            checkCollisions();
+
+            // Update score
+            score++;
+            currentScoreEl.textContent = Math.floor(score / 60); // Score per second (assuming 60fps)
+        }
+
+        function checkCollisions() {
+            // Player vs Asteroids
+            for (let i = 0; i < asteroids.length; i++) {
+                const a = asteroids[i];
+                const distance = Math.sqrt((player.x - a.x) ** 2 + (player.y - a.y) ** 2);
+                if (distance < (player.radius + a.size / 2)) {
+                    endGame();
+                    return;
+                }
+            }
+
+            // Player vs Orbs (Collect)
+            for (let i = orbs.length - 1; i >= 0; i--) {
+                const o = orbs[i];
+                const distance = Math.sqrt((player.x - o.x) ** 2 + (player.y - o.y) ** 2);
+                if (distance < (player.radius + o.size)) {
+                    score += 500; // Add bonus points for collecting an orb
+                    orbs.splice(i, 1); // Remove the orb
+                }
+            }
+        }
+
+        // Draw a simple starfield
+        const starCount = 100;
+        const stars = [];
+        for (let i = 0; i < starCount; i++) {
+            stars.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                size: Math.random() * 2 + 1,
+                speed: Math.random() * 0.5 + 0.1
+            });
+        }
+        function drawStars() {
+            ctx.fillStyle = '#ffffff';
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = '#ffffff';
+            for (let i = 0; i < stars.length; i++) {
+                const star = stars[i];
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.size / 2, 0, Math.PI * 2);
+                ctx.fill();
+                star.y += star.speed * speedMultiplier;
+                if (star.y > canvas.height) {
+                    star.y = 0;
+                    star.x = Math.random() * canvas.width;
+                }
+            }
+            ctx.shadowBlur = 0;
+        }
+
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawStars();
+            player.draw();
+            asteroids.forEach(asteroid => asteroid.draw());
+            orbs.forEach(orb => orb.draw());
+        }
+
+        function endGame() {
+            gameState = 'GAME_OVER';
+            cancelAnimationFrame(animationFrameId);
+            finalScoreEl.textContent = `Final Score: ${Math.floor(score / 60)}`;
+            gameOverMenu.classList.remove('hidden');
+            scoreContainer.style.display = 'none';
+        }
+
+        function gameLoop(timestamp) {
+            if (gameState === 'PLAYING') {
+                spawnObjects(timestamp);
+                update();
+                draw();
+                animationFrameId = requestAnimationFrame(gameLoop);
+            }
+        }
+
+        // --- Event Listeners ---
+        startButton.addEventListener('click', () => {
+            initGame();
+        });
+
+        restartButton.addEventListener('click', () => {
+            initGame();
+        });
+
+        // Touch and Mouse Controls
+        let touchX = null;
+        let isDragging = false;
+
+        function handlePointerDown(e) {
+            e.preventDefault();
+            isDragging = true;
+            touchX = e.clientX || e.touches[0].clientX;
+            player.targetX = touchX; // Set target immediately on click
+        }
+
+        function handlePointerMove(e) {
+            e.preventDefault();
+            if (!isDragging) return;
+
+            const currentX = e.clientX || e.touches[0].clientX;
+            const dx = currentX - touchX;
+            player.targetX += dx;
+            touchX = currentX;
+
+            // Clamp targetX to canvas boundaries
+            player.targetX = Math.max(player.width / 2, Math.min(canvas.width - player.width / 2, player.targetX));
+        }
+
+        function handlePointerUp(e) {
+            e.preventDefault();
+            isDragging = false;
+        }
+
+        canvas.addEventListener('mousedown', handlePointerDown);
+        canvas.addEventListener('mousemove', handlePointerMove);
+        canvas.addEventListener('mouseup', handlePointerUp);
+        canvas.addEventListener('mouseleave', handlePointerUp);
+
+        canvas.addEventListener('touchstart', handlePointerDown, { passive: false });
+        canvas.addEventListener('touchmove', handlePointerMove, { passive: false });
+        canvas.addEventListener('touchend', handlePointerUp, { passive: false });
+
+
+        // --- Window resize handling for responsiveness ---
+        function resizeCanvas() {
+            const container = document.querySelector('.game-container');
+            const newWidth = container.clientWidth;
+            const newHeight = container.clientHeight;
+
+            canvas.width = newWidth;
+            canvas.height = newHeight;
+
+            // Re-initialize player position on resize
+            if (player) {
+                player.y = canvas.height * 0.8;
+                player.x = canvas.width / 2;
+                player.targetX = player.x;
+            }
+
+            // Redraw the canvas content
+            if (gameState === 'PLAYING') {
+                 draw();
+            }
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        window.onload = function() {
+            resizeCanvas();
+            // Re-initialize stars with new canvas size
+            stars.length = 0;
+            for (let i = 0; i < starCount; i++) {
+                stars.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    size: Math.random() * 2 + 1,
+                    speed: Math.random() * 0.5 + 0.1
+                });
+            }
+        }
+    </script>
+</body>
+</html>
 
