@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Professional Text</title>
+    <!-- Tailwind CSS for utility classes -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Font: Inter for a modern look -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        /* Custom CSS to apply the Inter font and a glow effect */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0d1117;
+            color: #e2e8f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 1rem;
+        }
+        .text-glow {
+            text-shadow: 0 0 8px rgba(74, 144, 226, 0.7),
+                         0 0 20px rgba(74, 144, 226, 0.4);
+        }
+    </style>
+</head>
+<body class="bg-gray-900">
+    <div class="text-center p-8 bg-gray-800 rounded-2xl shadow-2xl border border-gray-700">
+        <h1 class="text-4xl sm:text-5xl font-bold text-blue-400 text-glow tracking-wider mb-4">
+            Hello, World!
+        </h1>
+        <p class="text-base sm:text-lg text-gray-300 max-w-xl mx-auto">
+            This is a professional and modern-looking text display. It's clean, responsive, and easy to customize.
+        </p>
+    </div>
+</body>
+</html>
